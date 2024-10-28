@@ -14,8 +14,10 @@ spark = SparkSession.builder.appName("example").master("local[*]").getOrCreate()
 
 # Define aggregation functions generator
 def count_nulls_for_each_column(df: "DataFrame") -> "List[Column]":
-    return [F.count("*").alias("count")] + [F.count_if(F.col(column).isNull()).alias(f'nulls_in_{column}') for column in
-                                            df.columns]
+    return [
+        F.count_if(F.col(column).isNull()).alias(f'nulls_in_{column}')
+        for column in df.columns
+    ] + [F.count("*").alias("count")]
 
 
 # Define transformation functions
@@ -31,9 +33,8 @@ def filter_half_df(df: "DataFrame") -> "DataFrame":
 
 @observe_output_df(count_nulls_for_each_column)
 def add_random_null_column(df: "DataFrame", column_name, chance_to_be_null=0.5) -> "DataFrame":
-    return df.withColumn(column_name,
-                         F.when((F.rand() * 100).cast('int') % int(1 / chance_to_be_null) == 0, 'not_null').otherwise(
-                             F.lit(None)))
+    random_bool_value_column = (F.rand() * 100).cast('int') % int(1 / chance_to_be_null) == 0
+    return df.withColumn(column_name, F.when(random_bool_value_column, 'not_null').otherwise(F.lit(None)))
 
 
 @observe_output_df(count_nulls_for_each_column)
